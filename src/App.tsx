@@ -10,6 +10,9 @@ import AlternateMix from "./pages/AlternateMix";
 import Organize from "./pages/Organize";
 import Compress from "./pages/Compress";
 import ExtractPages from "./pages/ExtractPages";
+import DeletePages from "./pages/DeletePages";
+import FillSign from "./pages/FillSign";
+import CreateForms from "./pages/CreateForms";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -29,6 +32,9 @@ const App = () => (
           <Route path="/organize" element={<Organize />} />
           <Route path="/compress" element={<Compress />} />
           <Route path="/extract" element={<ExtractPages />} />
+          <Route path="/delete-pages" element={<DeletePages />} />
+          <Route path="/fill-sign" element={<FillSign />} />
+          <Route path="/create-forms" element={<CreateForms />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

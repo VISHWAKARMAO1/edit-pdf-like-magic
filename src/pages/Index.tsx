@@ -128,19 +128,19 @@ const Index = () => {
           title: "Fill & Sign",
           desc: "Add signatures and fill PDF forms.",
           icon: PenLine,
-          to: "/editor",
+          to: "/fill-sign",
         },
         {
           title: "Create Forms",
-          desc: "Make PDFs fillable (coming soon).",
+          desc: "Make PDFs fillable by adding text fields and checkboxes.",
           icon: FileText,
-          to: "/editor",
+          to: "/create-forms",
         },
         {
           title: "Delete Pages",
-          desc: "Remove pages from a PDF (coming soon).",
+          desc: "Remove pages from a PDF.",
           icon: Trash2,
-          to: "/editor",
+          to: "/delete-pages",
         },
       ],
     },
@@ -246,8 +246,8 @@ const Index = () => {
               },
               {
                 title: "Delete Pages",
-                desc: "Remove pages from a document (coming soon).",
-                to: "/editor",
+                desc: "Remove pages from a document.",
+                to: "/delete-pages",
               }].map((c) => (
                 <Card key={c.title} className="p-5">
                   <div className="text-base font-semibold">{c.title}</div>
