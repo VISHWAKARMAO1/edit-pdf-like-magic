@@ -64,6 +64,44 @@ function sampleCanvasBg(canvas: HTMLCanvasElement, box: PdfTextItemBox): string 
   }
 }
 
+function captureCanvasPatchDataUrl(params: {
+  canvas: HTMLCanvasElement;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+}): string | undefined {
+  const { canvas, x, y, width, height } = params;
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return undefined;
+
+  const sx = clamp(Math.floor(x), 0, Math.max(0, canvas.width - 1));
+  const sy = clamp(Math.floor(y), 0, Math.max(0, canvas.height - 1));
+  const sw = clamp(Math.ceil(width), 1, canvas.width - sx);
+  const sh = clamp(Math.ceil(height), 1, canvas.height - sy);
+  if (sw <= 0 || sh <= 0) return undefined;
+
+  const out = document.createElement("canvas");
+  out.width = sw;
+  out.height = sh;
+  const octx = out.getContext("2d");
+  if (!octx) return undefined;
+  try {
+    octx.drawImage(canvas, sx, sy, sw, sh, 0, 0, sw, sh);
+    return out.toDataURL("image/png");
+  } catch {
+    return undefined;
+  }
+}
+
+function dataUrlToUint8Array(dataUrl: string): Uint8Array {
+  const [, base64] = dataUrl.split(",");
+  const bin = atob(base64 ?? "");
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  return bytes;
+}
+
 // Configure PDF.js worker for Vite.
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.mjs",
@@ -287,7 +325,10 @@ export default function PdfEditor() {
     });
   };
 
-  const upsertFromBox = (box: PdfTextItemBox, bgColorHex?: string) => {
+  const upsertFromBox = (
+    box: PdfTextItemBox,
+    opts?: { bgColorHex?: string; bgPatchDataUrl?: string }
+  ) => {
     setEdits((prev) => {
       const existing = prev[box.key];
       const next: PdfTextEdit = existing ?? {
@@ -301,7 +342,8 @@ export default function PdfEditor() {
         newText: box.text,
         fontSize: clamp(Math.round(box.height * 0.9), 8, 48),
         colorHex: "#111827", // roughly foreground in light mode
-        bgColorHex: bgColorHex ?? "#ffffff",
+        bgColorHex: opts?.bgColorHex ?? "#ffffff",
+        bgPatchDataUrl: opts?.bgPatchDataUrl,
         padding: 2,
       };
       return { ...prev, [box.key]: next };
@@ -349,13 +391,31 @@ export default function PdfEditor() {
       const { r, g, b } = hexToRgb01(edit.colorHex);
       const bg = hexToRgb01(edit.bgColorHex || "#ffffff");
 
-      page.drawRectangle({
-        x: xPdf,
-        y: yPdf,
-        width: wPdf,
-        height: hPdf,
-        color: rgb(bg.r, bg.g, bg.b),
-      });
+      // Best-effort: cover the original text.
+      // If we captured an image patch from the rendered page, use it (more seamless).
+      if (edit.bgPatchDataUrl) {
+        try {
+          const patchBytes = dataUrlToUint8Array(edit.bgPatchDataUrl);
+          const img = await doc.embedPng(patchBytes);
+          page.drawImage(img, { x: xPdf, y: yPdf, width: wPdf, height: hPdf });
+        } catch {
+          page.drawRectangle({
+            x: xPdf,
+            y: yPdf,
+            width: wPdf,
+            height: hPdf,
+            color: rgb(bg.r, bg.g, bg.b),
+          });
+        }
+      } else {
+        page.drawRectangle({
+          x: xPdf,
+          y: yPdf,
+          width: wPdf,
+          height: hPdf,
+          color: rgb(bg.r, bg.g, bg.b),
+        });
+      }
 
       page.drawText(edit.newText, {
         x: edit.x,
@@ -671,7 +731,7 @@ function PdfPage(props: {
   scale: number;
   edits: Record<string, PdfTextEdit>;
   activeKey: string | null;
-  onPickText: (box: PdfTextItemBox, bgColorHex?: string) => void;
+  onPickText: (box: PdfTextItemBox, opts?: { bgColorHex?: string; bgPatchDataUrl?: string }) => void;
   onMoveActive: (key: string, nextX: number, nextY: number) => void;
   onEditText: (key: string, nextText: string) => void;
   onDoneEditing: () => void;
@@ -761,8 +821,18 @@ function PdfPage(props: {
                 style={{ left: b.x, top: b.y, width: b.width, height: b.height }}
                 onClick={() => {
                   const canvas = canvasRef.current;
-                  const bg = canvas ? sampleCanvasBg(canvas, b) : "#ffffff";
-                  onPickText(b, bg);
+                  const pad = 2;
+                  const bgColorHex = canvas ? sampleCanvasBg(canvas, b) : "#ffffff";
+                  const bgPatchDataUrl = canvas
+                    ? captureCanvasPatchDataUrl({
+                        canvas,
+                        x: b.x - pad,
+                        y: b.y - pad,
+                        width: b.width + pad * 2,
+                        height: b.height + pad * 2,
+                      })
+                    : undefined;
+                  onPickText(b, { bgColorHex, bgPatchDataUrl });
                 }}
                 aria-label={`Edit text: ${b.text}`}
               />
@@ -888,7 +958,12 @@ function DraggableOverlay(props: {
           "h-full w-full rounded-sm border",
           active ? "border-ring" : "border-transparent"
         )}
-        style={{ backgroundColor: edit.bgColorHex }}
+        style={{
+          backgroundColor: edit.bgColorHex,
+          backgroundImage: edit.bgPatchDataUrl ? `url(${edit.bgPatchDataUrl})` : undefined,
+          backgroundRepeat: "no-repeat",
+          backgroundSize: "100% 100%",
+        }}
       >
         <div
           className="h-full w-full whitespace-pre-wrap"

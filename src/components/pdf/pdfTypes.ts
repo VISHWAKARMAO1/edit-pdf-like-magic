@@ -21,5 +21,7 @@ export type PdfTextEdit = {
   fontSize: number;
   colorHex: string;
   bgColorHex: string;
+  /** Data URL (PNG) snapshot of the background under the original text. */
+  bgPatchDataUrl?: string;
   padding: number;
 };
