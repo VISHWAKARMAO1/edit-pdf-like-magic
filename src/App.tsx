@@ -9,6 +9,7 @@ import Merge from "./pages/Merge";
 import AlternateMix from "./pages/AlternateMix";
 import Organize from "./pages/Organize";
 import Compress from "./pages/Compress";
+import ExtractPages from "./pages/ExtractPages";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -27,6 +28,7 @@ const App = () => (
           <Route path="/alternate-mix" element={<AlternateMix />} />
           <Route path="/organize" element={<Organize />} />
           <Route path="/compress" element={<Compress />} />
+          <Route path="/extract" element={<ExtractPages />} />
           {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
           <Route path="*" element={<NotFound />} />
         </Routes>

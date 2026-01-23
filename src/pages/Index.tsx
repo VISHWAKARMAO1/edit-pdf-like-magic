@@ -93,7 +93,7 @@ const Index = () => {
           title: "Extract Pages",
           desc: "Create a new document containing only the pages you need.",
           icon: Scissors,
-          to: "/editor",
+          to: "/extract",
         },
         {
           title: "Split by Pages",
