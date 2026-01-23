@@ -18,9 +18,9 @@ export function TopNav({ variant = "home", rightSlot }: TopNavProps) {
           activeClassName=""
         >
           <div className="grid h-9 w-9 place-items-center rounded-full bg-primary text-primary-foreground">
-            <span className="text-sm font-bold">S</span>
+            <span className="text-sm font-bold">D</span>
           </div>
-          <div className="text-sm font-semibold tracking-tight">Sejda</div>
+          <div className="text-sm font-semibold tracking-tight">Dr. PDF Pro</div>
         </NavLink>
 
         <nav
