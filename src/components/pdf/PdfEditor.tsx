@@ -586,6 +586,7 @@ export default function PdfEditor() {
                   <PdfExportPreview
                     bytes={previewBytes}
                     highlights={Object.values(edits)}
+                    scale={scale}
                   />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">
