@@ -656,7 +656,7 @@ export default function PdfEditor() {
   };
 
   return (
-    <div className="flex h-screen w-full flex-col overflow-hidden">
+    <div className="flex h-full min-h-0 w-full flex-col overflow-hidden">
       {/* Hidden file input (Sejda-style button triggers this) */}
       <input
         ref={fileInputRef}
@@ -782,9 +782,9 @@ export default function PdfEditor() {
           </header>
 
           {/* Workspace (grey bg + right inspector) */}
-          <div className="relative flex flex-1 overflow-hidden">
+          <div className="relative flex min-h-0 flex-1 overflow-hidden">
             {/* PDF Canvas area (grey workspace) */}
-            <div className="flex-1 overflow-auto bg-muted/30 p-4">
+            <div className="flex min-h-0 flex-1 overflow-auto bg-muted/30 p-4">
 
           <Dialog
             open={previewOpen}
@@ -851,7 +851,7 @@ export default function PdfEditor() {
             </DialogContent>
           </Dialog>
 
-          <div ref={containerRef} className="mt-4 space-y-6" aria-busy={isLoading}>
+           <div ref={containerRef} className="mx-auto mt-4 max-w-[980px] space-y-6" aria-busy={isLoading}>
             {Array.from({ length: numPages }).map((_, idx) => (
               <PdfPage
                 key={`page-${idx + 1}`}
@@ -870,7 +870,7 @@ export default function PdfEditor() {
               />
             ))}
           </div>
-        </section>
+        </div>
 
         <aside className="lg:sticky lg:top-6 lg:h-[calc(100vh-3rem)]">
           <Card className="h-full p-4">
@@ -1052,6 +1052,7 @@ export default function PdfEditor() {
           </Card>
         </aside>
       </div>
+        </>
       )}
     </div>
   );
