@@ -91,6 +91,30 @@ function u8ToArrayBuffer(u8: Uint8Array): ArrayBuffer {
   return u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength) as ArrayBuffer;
 }
 
+function fitFontSizeToWidth(params: {
+  text: string;
+  maxWidth: number;
+  startingSize: number;
+  minSize?: number;
+  fontFamily?: string;
+}): number {
+  const { text, maxWidth, startingSize, minSize = 6, fontFamily = "Helvetica" } = params;
+  const safeMax = Math.max(4, maxWidth);
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return startingSize;
+
+  let size = clamp(Math.round(startingSize), minSize, 96);
+  for (let i = 0; i < 40; i++) {
+    ctx.font = `${size}px ${fontFamily}`;
+    const w = ctx.measureText(text || " ").width;
+    if (w <= safeMax) break;
+    size = Math.max(minSize, size - 1);
+    if (size === minSize) break;
+  }
+  return size;
+}
+
 function splitIntoWordSpans(str: string): { word: string; start: number; end: number }[] {
   // Returns spans for non-whitespace “words” within the string.
   const spans: { word: string; start: number; end: number }[] = [];
@@ -242,10 +266,25 @@ export default function PdfEditor() {
   };
 
   const updateEdit = (key: string, partial: Partial<PdfTextEdit>) => {
-    setEdits((prev) => ({
-      ...prev,
-      [key]: { ...prev[key], ...partial },
-    }));
+    setEdits((prev) => {
+      const current = prev[key];
+      if (!current) return prev;
+
+      const next = { ...current, ...partial };
+
+      // Make replacements feel “in-place” by shrinking text to fit the original box.
+      if (partial.newText !== undefined) {
+        const pad = next.padding ?? 2;
+        const fitted = fitFontSizeToWidth({
+          text: partial.newText,
+          maxWidth: Math.max(10, next.width - pad * 2),
+          startingSize: next.fontSize,
+        });
+        next.fontSize = fitted;
+      }
+
+      return { ...prev, [key]: next };
+    });
   };
 
   const upsertFromBox = (box: PdfTextItemBox, bgColorHex?: string) => {
@@ -358,17 +397,7 @@ export default function PdfEditor() {
   };
 
   return (
-    <div className="mx-auto w-full max-w-[1200px] px-4 py-8">
-      <header className="mb-6">
-        <h1 className="text-balance text-3xl font-semibold tracking-tight">
-          PDF Text Editor
-        </h1>
-        <p className="mt-2 max-w-2xl text-sm text-muted-foreground">
-          Upload a PDF, click existing text to edit it, then export a new PDF. (Best
-          results with simple, text-based PDFs.)
-        </p>
-      </header>
-
+    <div className="w-full">
       <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
         <section className="min-w-0">
           <Card className="p-3">
