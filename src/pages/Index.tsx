@@ -151,7 +151,7 @@ const Index = () => {
           title: "Compress",
           desc: "Reduce the size of your PDF (coming soon).",
           icon: Minimize2,
-          to: "/editor",
+          to: "/compress",
         },
         {
           title: "Deskew",
