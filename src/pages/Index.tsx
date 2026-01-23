@@ -82,7 +82,7 @@ const Index = () => {
           title: "Organize",
           desc: "Arrange and reorder PDF pages.",
           icon: Layers,
-          to: "/editor",
+          to: "/organize",
         },
       ],
     },
