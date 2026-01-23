@@ -603,7 +603,6 @@ export default function PdfEditor() {
                 {previewBytes ? (
                   <PdfExportPreview
                     bytes={previewBytes}
-                    highlights={Object.values(edits)}
                     scale={scale}
                   />
                 ) : (
