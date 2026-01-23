@@ -3,6 +3,25 @@ import { TopNav } from "@/components/layout/TopNav";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
+import {
+  Combine,
+  Columns2,
+  Layers,
+  Scissors,
+  Bookmark,
+  SplitSquareHorizontal,
+  Ruler,
+  Type,
+  PenLine,
+  FileText,
+  Trash2,
+  Minimize2,
+  ScanLine,
+  ShieldCheck,
+  KeyRound,
+  Stamp,
+  Layers3,
+} from "lucide-react";
 
 function WaveDivider() {
   return (
@@ -43,6 +62,136 @@ function Dots({ className }: { className?: string }) {
 }
 
 const Index = () => {
+  const toolGroups = [
+    {
+      label: "MERGE",
+      items: [
+        {
+          title: "Alternate & Mix",
+          desc: "Mix pages from 2 or more documents, alternating between them.",
+          icon: Columns2,
+          to: "/editor",
+        },
+        {
+          title: "Merge",
+          desc: "Combine multiple PDFs and images into one.",
+          icon: Combine,
+          to: "/editor",
+        },
+        {
+          title: "Organize",
+          desc: "Arrange and reorder PDF pages.",
+          icon: Layers,
+          to: "/editor",
+        },
+      ],
+    },
+    {
+      label: "SPLIT",
+      items: [
+        {
+          title: "Extract Pages",
+          desc: "Create a new document containing only the pages you need.",
+          icon: Scissors,
+          to: "/editor",
+        },
+        {
+          title: "Split by Pages",
+          desc: "Split specific page ranges or extract every page into separate PDFs.",
+          icon: SplitSquareHorizontal,
+          to: "/editor",
+        },
+        {
+          title: "Split by Bookmarks",
+          desc: "Split into documents using the PDF's table of contents.",
+          icon: Bookmark,
+          to: "/editor",
+        },
+        {
+          title: "Split by Size",
+          desc: "Get multiple smaller documents with specific file sizes.",
+          icon: Ruler,
+          to: "/editor",
+        },
+      ],
+    },
+    {
+      label: "EDIT & SIGN",
+      items: [
+        {
+          title: "PDF Editor",
+          desc: "Edit existing text, replace words, and export.",
+          icon: Type,
+          to: "/editor",
+        },
+        {
+          title: "Fill & Sign",
+          desc: "Add signatures and fill PDF forms.",
+          icon: PenLine,
+          to: "/editor",
+        },
+        {
+          title: "Create Forms",
+          desc: "Make PDFs fillable (coming soon).",
+          icon: FileText,
+          to: "/editor",
+        },
+        {
+          title: "Delete Pages",
+          desc: "Remove pages from a PDF (coming soon).",
+          icon: Trash2,
+          to: "/editor",
+        },
+      ],
+    },
+    {
+      label: "COMPRESS & SCANS",
+      items: [
+        {
+          title: "Compress",
+          desc: "Reduce the size of your PDF (coming soon).",
+          icon: Minimize2,
+          to: "/editor",
+        },
+        {
+          title: "Deskew",
+          desc: "Automatically straighten scanned pages (coming soon).",
+          icon: ScanLine,
+          to: "/editor",
+        },
+        {
+          title: "OCR",
+          desc: "Convert scans into searchable text (coming soon).",
+          icon: Layers3,
+          to: "/editor",
+        },
+      ],
+    },
+    {
+      label: "SECURITY",
+      items: [
+        {
+          title: "Protect",
+          desc: "Password-protect a PDF (coming soon).",
+          icon: ShieldCheck,
+          to: "/editor",
+        },
+        {
+          title: "Unlock",
+          desc: "Remove password protection (coming soon).",
+          icon: KeyRound,
+          to: "/editor",
+        },
+        {
+          title: "Watermark",
+          desc: "Add a watermark (coming soon).",
+          icon: Stamp,
+          to: "/editor",
+        },
+      ],
+    },
+  ] as const;
+
   return (
     <div className="min-h-screen bg-background text-foreground">
       <TopNav variant="home" />
@@ -111,6 +260,48 @@ const Index = () => {
                 </Card>
               ))}
             </div>
+          </div>
+        </section>
+
+        {/* Tools grid (Sejda-style) */}
+        <section id="tools" className="bg-muted/40">
+          <div className="mx-auto max-w-[1200px] px-4 pb-14 pt-2">
+            {toolGroups.map((group) => (
+              <div key={group.label} className="mt-10">
+                <div className="text-xs font-semibold uppercase tracking-wider text-primary">
+                  {group.label}
+                </div>
+
+                <div className="mt-4 grid gap-4 md:grid-cols-3 lg:grid-cols-4">
+                  {group.items.map((t) => {
+                    const Icon = t.icon;
+                    return (
+                      <Card key={`${group.label}-${t.title}`} className="p-5">
+                        <div className="flex items-start gap-3">
+                          <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-accent text-accent-foreground">
+                            <Icon className="h-4 w-4" />
+                          </div>
+                          <div className="min-w-0">
+                            <div className="text-sm font-semibold leading-tight">
+                              {t.title}
+                            </div>
+                            <p className="mt-1 text-xs text-muted-foreground">
+                              {t.desc}
+                            </p>
+                          </div>
+                        </div>
+
+                        <Button asChild className="mt-4" variant="secondary">
+                          <NavLink to={t.to} activeClassName="">
+                            Open
+                          </NavLink>
+                        </Button>
+                      </Card>
+                    );
+                  })}
+                </div>
+              </div>
+            ))}
           </div>
         </section>
       </main>
