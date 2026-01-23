@@ -118,6 +118,34 @@ function guessFontPreset(fontFamily?: string): PdfFontPreset {
   return "auto";
 }
 
+function inferBoldItalic(params: { fontName?: string; fontFamily?: string }): { bold: boolean; italic: boolean } {
+  const raw = `${params.fontName ?? ""} ${params.fontFamily ?? ""}`.toLowerCase();
+  const bold = raw.includes("bold") || raw.includes("black") || raw.includes("heavy") || raw.includes("demi");
+  const italic = raw.includes("italic") || raw.includes("oblique");
+  return { bold, italic };
+}
+
+function presetToStandardFont(preset: PdfFontPreset, bold: boolean, italic: boolean): StandardFonts {
+  // pdf-lib only supports the 14 standard fonts; map style flags to the closest variant.
+  if (preset === "times") {
+    if (bold && italic) return StandardFonts.TimesRomanBoldItalic;
+    if (bold) return StandardFonts.TimesRomanBold;
+    if (italic) return StandardFonts.TimesRomanItalic;
+    return StandardFonts.TimesRoman;
+  }
+  if (preset === "courier") {
+    if (bold && italic) return StandardFonts.CourierBoldOblique;
+    if (bold) return StandardFonts.CourierBold;
+    if (italic) return StandardFonts.CourierOblique;
+    return StandardFonts.Courier;
+  }
+  // helvetica + auto fallback
+  if (bold && italic) return StandardFonts.HelveticaBoldOblique;
+  if (bold) return StandardFonts.HelveticaBold;
+  if (italic) return StandardFonts.HelveticaOblique;
+  return StandardFonts.Helvetica;
+}
+
 function presetToCssFont(preset: PdfFontPreset, detected?: string): string {
   switch (preset) {
     case "courier":
@@ -276,6 +304,7 @@ function getItemBoxes(textContent: any, viewport: any, pageNumber: number): PdfT
     const str: string = item.str;
     const fontName: string | undefined = item.fontName;
     const fontFamily: string | undefined = fontName ? styles[fontName]?.fontFamily : undefined;
+    const { bold: isBold, italic: isItalic } = inferBoldItalic({ fontName, fontFamily });
     const spans = splitIntoWordSpans(str);
 
     if (spans.length <= 1) {
@@ -284,7 +313,10 @@ function getItemBoxes(textContent: any, viewport: any, pageNumber: number): PdfT
         pageNumber,
         itemIndex: i,
         text: str,
+        fontName,
         fontFamily,
+        isBold,
+        isItalic,
         x: x0,
         y: y0,
         width: fullWidth,
@@ -304,7 +336,10 @@ function getItemBoxes(textContent: any, viewport: any, pageNumber: number): PdfT
         pageNumber,
         itemIndex: i,
         text: s.word,
+        fontName,
         fontFamily,
+        isBold,
+        isItalic,
         x,
         y: y0,
         width,
@@ -423,6 +458,8 @@ export default function PdfEditor() {
       const existing = prev[box.key];
       const detectedFontFamily = box.fontFamily;
       const defaultPreset = guessFontPreset(detectedFontFamily);
+      const detectedBold = box.isBold ?? false;
+      const detectedItalic = box.isItalic ?? false;
       const next: PdfTextEdit = existing ?? {
         key: box.key,
         pageNumber: box.pageNumber,
@@ -435,6 +472,11 @@ export default function PdfEditor() {
         fontSize: clamp(Math.round(box.height * 0.9), 8, 48),
         fontPreset: defaultPreset,
         detectedFontFamily,
+        detectedBold,
+        detectedItalic,
+        bold: detectedBold,
+        italic: detectedItalic,
+        underline: false,
         colorHex: opts?.colorHex ?? "#111827",
         bgColorHex: opts?.bgColorHex ?? "#ffffff",
         // Slight padding helps cover antialiasing edges.
@@ -502,12 +544,11 @@ export default function PdfEditor() {
       const bg = hexToRgb01(edit.bgColorHex || "#ffffff");
 
       const fontPreset: PdfFontPreset = edit.fontPreset ?? "auto";
-      const fontName =
-        fontPreset === "times"
-          ? StandardFonts.TimesRoman
-          : fontPreset === "courier"
-            ? StandardFonts.Courier
-            : StandardFonts.Helvetica;
+      const fontName = presetToStandardFont(
+        fontPreset === "auto" ? guessFontPreset(edit.detectedFontFamily) : fontPreset,
+        !!edit.bold,
+        !!edit.italic
+      );
       const font = await doc.embedFont(fontName);
 
       // Cover original then draw the new text.
@@ -519,13 +560,25 @@ export default function PdfEditor() {
         color: rgb(bg.r, bg.g, bg.b),
       });
 
+      const yText = y0 + padPdf + Math.max(0, (h0 - fontSizePdf) / 2);
       page.drawText(edit.newText, {
         x: x0,
-        y: y0 + padPdf + Math.max(0, (h0 - fontSizePdf) / 2),
+        y: yText,
         size: fontSizePdf,
         font,
         color: rgb(r, g, b),
       });
+
+      if (edit.underline) {
+        // Approx underline: a thin line slightly below the baseline.
+        const underlineY = yText - fontSizePdf * 0.12;
+        page.drawLine({
+          start: { x: x0, y: underlineY },
+          end: { x: x0 + w0, y: underlineY },
+          thickness: Math.max(0.5, fontSizePdf * 0.06),
+          color: rgb(r, g, b),
+        });
+      }
     }
 
     const out = await doc.save();
@@ -887,6 +940,36 @@ export default function PdfEditor() {
                       className="h-10 p-1"
                     />
                   </div>
+
+                  <div className="space-y-2">
+                    <Label className="block">Style</Label>
+                    <div className="flex flex-wrap items-center gap-3 text-sm">
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={activeEdit.bold}
+                          onChange={(e) => updateEdit(activeEdit.key, { bold: e.target.checked })}
+                        />
+                        Bold
+                      </label>
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={activeEdit.italic}
+                          onChange={(e) => updateEdit(activeEdit.key, { italic: e.target.checked })}
+                        />
+                        Italic
+                      </label>
+                      <label className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={activeEdit.underline}
+                          onChange={(e) => updateEdit(activeEdit.key, { underline: e.target.checked })}
+                        />
+                        Underline
+                      </label>
+                    </div>
+                  </div>
                 </div>
 
                 <Button
@@ -1094,6 +1177,10 @@ function InlineTextEditor(props: {
           lineHeight: 1.05,
           color: edit.colorHex,
           backgroundColor: edit.bgColorHex,
+          fontFamily: presetToCssFont(edit.fontPreset, edit.detectedFontFamily),
+          fontWeight: edit.bold ? 700 : 400,
+          fontStyle: edit.italic ? "italic" : "normal",
+          textDecoration: edit.underline ? "underline" : "none",
         }}
         aria-label="Edit selected PDF text"
       />
@@ -1151,6 +1238,10 @@ function DraggableOverlay(props: {
             lineHeight: 1.05,
             color: edit.colorHex,
             padding: edit.padding,
+            fontFamily: presetToCssFont(edit.fontPreset, edit.detectedFontFamily),
+            fontWeight: edit.bold ? 700 : 400,
+            fontStyle: edit.italic ? "italic" : "normal",
+            textDecoration: edit.underline ? "underline" : "none",
           }}
         >
           {edit.newText}
