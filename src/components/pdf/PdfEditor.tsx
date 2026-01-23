@@ -656,7 +656,7 @@ export default function PdfEditor() {
   };
 
   return (
-    <div className="flex h-full min-h-0 w-full flex-col overflow-hidden">
+    <div className="flex flex-1 min-h-0 w-full flex-col overflow-hidden">
       {/* Hidden file input (Sejda-style button triggers this) */}
       <input
         ref={fileInputRef}
@@ -784,9 +784,9 @@ export default function PdfEditor() {
           {/* Workspace (grey bg + right inspector) */}
           <div className="relative flex min-h-0 flex-1 overflow-hidden">
             {/* PDF Canvas area (grey workspace) */}
-            <div className="flex min-h-0 flex-1 overflow-auto bg-muted/30 p-4">
+            <div className="flex min-h-0 flex-1 overflow-auto bg-muted/30 p-4 pb-16">
 
-          <Dialog
+              <Dialog
             open={previewOpen}
             onOpenChange={(open) => {
               setPreviewOpen(open);
@@ -849,7 +849,7 @@ export default function PdfEditor() {
                 </Button>
               </DialogFooter>
             </DialogContent>
-          </Dialog>
+              </Dialog>
 
            <div ref={containerRef} className="mx-auto mt-4 max-w-[980px] space-y-6" aria-busy={isLoading}>
             {Array.from({ length: numPages }).map((_, idx) => (
