@@ -578,11 +578,23 @@ export default function PdfEditor() {
 
               <div className="h-[70vh] w-full overflow-hidden rounded-md border border-border">
                 {previewUrl ? (
-                  <iframe
-                    title="Edited PDF preview"
-                    src={previewUrl}
+                  <object
+                    data={previewUrl}
+                    type="application/pdf"
                     className="h-full w-full"
-                  />
+                  >
+                    <div className="flex h-full w-full flex-col items-center justify-center gap-3 p-6 text-center">
+                      <p className="text-sm text-muted-foreground">
+                        Preview not available in this browser.
+                      </p>
+                      <Button
+                        variant="secondary"
+                        onClick={() => window.open(previewUrl, "_blank", "noopener,noreferrer")}
+                      >
+                        Open preview in new tab
+                      </Button>
+                    </div>
+                  </object>
                 ) : (
                   <div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">
                     Generating preview…
@@ -596,6 +608,16 @@ export default function PdfEditor() {
                   onClick={() => setPreviewOpen(false)}
                 >
                   Close
+                </Button>
+                <Button
+                  variant="secondary"
+                  onClick={() => {
+                    if (!previewUrl) return;
+                    window.open(previewUrl, "_blank", "noopener,noreferrer");
+                  }}
+                  disabled={!previewUrl}
+                >
+                  Open in new tab
                 </Button>
                 <Button
                   onClick={() => {
