@@ -485,10 +485,12 @@ export default function PdfEditor() {
       // Make replacements feel “in-place” by shrinking text to fit the original box.
       if (partial.newText !== undefined) {
         const pad = next.padding ?? 2;
+        const measureFontFamily = presetToCssFont(next.fontPreset ?? "auto", next.detectedFontFamily);
         const fitted = fitFontSizeToWidth({
           text: partial.newText,
           maxWidth: Math.max(10, next.width - pad * 2),
           startingSize: next.fontSize,
+          fontFamily: measureFontFamily,
         });
         next.fontSize = fitted;
       }
