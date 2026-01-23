@@ -66,58 +66,50 @@ function sampleCanvasBg(canvas: HTMLCanvasElement, box: PdfTextItemBox): string 
 }
 
 function sampleCanvasBgAroundBox(canvas: HTMLCanvasElement, box: PdfTextItemBox): string {
-  // Sample small patches just OUTSIDE the box (corners), then average.
-  // This avoids sampling the glyph pixels, and reduces the “highlight rectangle” effect.
+  // Sample INSIDE the box and ignore dark pixels (glyphs).
+  // This matches gradients/textured backgrounds better than outside sampling,
+  // and prevents the cover from looking like a "highlight".
   const ctx = canvas.getContext("2d");
   if (!ctx) return "#ffffff";
 
-  const gap = Math.max(2, Math.round(Math.min(box.width, box.height) * 0.18));
-  const size = Math.max(4, Math.round(Math.min(10, box.height * 0.6)));
-
-  const samples: Array<[number, number]> = [
-    // top-left outside
-    [box.x - gap - size, box.y - gap - size],
-    // top-right outside
-    [box.x + box.width + gap, box.y - gap - size],
-    // bottom-left outside
-    [box.x - gap - size, box.y + box.height + gap],
-    // bottom-right outside
-    [box.x + box.width + gap, box.y + box.height + gap],
-  ];
-
-  const picks: Array<{ r: number; g: number; b: number }> = [];
+  const sx = clamp(Math.floor(box.x), 0, Math.max(0, canvas.width - 1));
+  const sy = clamp(Math.floor(box.y), 0, Math.max(0, canvas.height - 1));
+  const sw = clamp(Math.ceil(box.width), 1, canvas.width - sx);
+  const sh = clamp(Math.ceil(box.height), 1, canvas.height - sy);
 
   try {
-    for (const [sx0, sy0] of samples) {
-      const sx = clamp(Math.round(sx0), 0, Math.max(0, canvas.width - 1));
-      const sy = clamp(Math.round(sy0), 0, Math.max(0, canvas.height - 1));
-      const sw = clamp(size, 1, canvas.width - sx);
-      const sh = clamp(size, 1, canvas.height - sy);
-      const img = ctx.getImageData(sx, sy, sw, sh);
-      const d = img.data;
-      let r = 0,
-        g = 0,
-        b = 0,
-        n = 0;
-      for (let i = 0; i < d.length; i += 4) {
-        const a = d[i + 3];
-        if (a < 16) continue;
-        r += d[i];
-        g += d[i + 1];
-        b += d[i + 2];
-        n++;
-      }
-      if (n > 0) picks.push({ r: Math.round(r / n), g: Math.round(g / n), b: Math.round(b / n) });
-    }
-  } catch {
-    // ignore
-  }
+    const img = ctx.getImageData(sx, sy, sw, sh);
+    const d = img.data;
+    let r = 0,
+      g = 0,
+      b = 0,
+      n = 0;
 
-  if (!picks.length) return "#ffffff";
-  const r = Math.round(picks.reduce((s, p) => s + p.r, 0) / picks.length);
-  const g = Math.round(picks.reduce((s, p) => s + p.g, 0) / picks.length);
-  const b = Math.round(picks.reduce((s, p) => s + p.b, 0) / picks.length);
-  return rgbToHex(r, g, b);
+    // Ignore pixels likely belonging to text strokes.
+    // Heuristic: skip low alpha, and skip "dark" pixels.
+    for (let i = 0; i < d.length; i += 4) {
+      const a = d[i + 3];
+      if (a < 32) continue;
+      const rr = d[i];
+      const gg = d[i + 1];
+      const bb = d[i + 2];
+      const luminance = 0.2126 * rr + 0.7152 * gg + 0.0722 * bb;
+      // Most text is darker than background.
+      if (luminance < 130) continue;
+      r += rr;
+      g += gg;
+      b += bb;
+      n++;
+    }
+
+    if (n < 10) {
+      // Fallback to center sampling if the heuristic removed too much.
+      return sampleCanvasBg(canvas, box);
+    }
+    return rgbToHex(Math.round(r / n), Math.round(g / n), Math.round(b / n));
+  } catch {
+    return sampleCanvasBg(canvas, box);
+  }
 }
 
 // NOTE: We intentionally don't use image patches to cover text.
@@ -365,8 +357,8 @@ export default function PdfEditor() {
         fontSize: clamp(Math.round(box.height * 0.9), 8, 48),
         colorHex: "#111827", // roughly foreground in light mode
         bgColorHex: opts?.bgColorHex ?? "#ffffff",
-        // Keep padding minimal so the cover doesn't look like a highlight.
-        padding: 1,
+        // Slight padding helps cover antialiasing edges.
+        padding: 2,
       };
       return { ...prev, [box.key]: next };
     });
