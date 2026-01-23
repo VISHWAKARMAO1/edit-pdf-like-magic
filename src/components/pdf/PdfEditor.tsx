@@ -25,6 +25,7 @@ import { cn } from "@/lib/utils";
 
 import type { PdfTextEdit, PdfTextItemBox } from "./pdfTypes";
 import { hexToRgb01 } from "./pdfColor";
+import { PdfExportPreview } from "./PdfExportPreview";
 
 function rgbToHex(r: number, g: number, b: number): string {
   const to = (n: number) => n.toString(16).padStart(2, "0");
@@ -254,6 +255,7 @@ export default function PdfEditor() {
   const [previewOpen, setPreviewOpen] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewBlob, setPreviewBlob] = useState<Blob | null>(null);
+  const [previewBytes, setPreviewBytes] = useState<Uint8Array | null>(null);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -307,6 +309,7 @@ export default function PdfEditor() {
     setNumPages(0);
     setPreviewOpen(false);
     setPreviewBlob(null);
+    setPreviewBytes(null);
     if (previewUrl) URL.revokeObjectURL(previewUrl);
     setPreviewUrl(null);
   };
@@ -428,6 +431,7 @@ export default function PdfEditor() {
       if (previewUrl) URL.revokeObjectURL(previewUrl);
       setPreviewBlob(blob);
       setPreviewUrl(url);
+      setPreviewBytes(outBytes);
       setPreviewOpen(true);
     } catch (e) {
       // buildEditedPdfBytes already toasted for "Nothing to export"
@@ -563,6 +567,7 @@ export default function PdfEditor() {
               setPreviewOpen(open);
               if (!open) {
                 setPreviewBlob(null);
+                setPreviewBytes(null);
                 if (previewUrl) URL.revokeObjectURL(previewUrl);
                 setPreviewUrl(null);
               }
@@ -577,24 +582,8 @@ export default function PdfEditor() {
               </DialogHeader>
 
               <div className="h-[70vh] w-full overflow-hidden rounded-md border border-border">
-                {previewUrl ? (
-                  <object
-                    data={previewUrl}
-                    type="application/pdf"
-                    className="h-full w-full"
-                  >
-                    <div className="flex h-full w-full flex-col items-center justify-center gap-3 p-6 text-center">
-                      <p className="text-sm text-muted-foreground">
-                        Preview not available in this browser.
-                      </p>
-                      <Button
-                        variant="secondary"
-                        onClick={() => window.open(previewUrl, "_blank", "noopener,noreferrer")}
-                      >
-                        Open preview in new tab
-                      </Button>
-                    </div>
-                  </object>
+                {previewBytes ? (
+                  <PdfExportPreview bytes={previewBytes} />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">
                     Generating preview…
