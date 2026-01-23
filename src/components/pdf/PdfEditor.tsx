@@ -39,6 +39,17 @@ function clamp(n: number, min: number, max: number) {
   return Math.max(min, Math.min(max, n));
 }
 
+function splitIntoWordSpans(str: string): { word: string; start: number; end: number }[] {
+  // Returns spans for non-whitespace “words” within the string.
+  const spans: { word: string; start: number; end: number }[] = [];
+  const re = /\S+/g;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(str))) {
+    spans.push({ word: m[0], start: m.index, end: m.index + m[0].length });
+  }
+  return spans;
+}
+
 function getItemBoxes(textContent: any, viewport: any, pageNumber: number): PdfTextItemBox[] {
   const items = textContent.items as any[];
   const boxes: PdfTextItemBox[] = [];
@@ -59,20 +70,46 @@ function getItemBoxes(textContent: any, viewport: any, pageNumber: number): PdfT
     if (!Number.isFinite(e) || !Number.isFinite(f) || w <= 0 || h <= 0) continue;
 
     const rect = viewport.convertToViewportRectangle([e, f, e + w, f + h]);
-    const x = Math.min(rect[0], rect[2]);
-    const y = Math.min(rect[1], rect[3]);
-    const width = Math.max(6, Math.abs(rect[2] - rect[0]));
+    const x0 = Math.min(rect[0], rect[2]);
+    const y0 = Math.min(rect[1], rect[3]);
+    const fullWidth = Math.max(6, Math.abs(rect[2] - rect[0]));
     const height = Math.max(6, Math.abs(rect[3] - rect[1]));
 
-    boxes.push({
-      key: `${pageNumber}:${i}`,
-      pageNumber,
-      itemIndex: i,
-      text: item.str,
-      x,
-      y,
-      width,
-      height,
+    // Word-level boxes: approximate by distributing the item's width by character positions.
+    // This makes “replace only that word” possible for most text PDFs.
+    const str: string = item.str;
+    const spans = splitIntoWordSpans(str);
+
+    if (spans.length <= 1) {
+      boxes.push({
+        key: `${pageNumber}:${i}:0`,
+        pageNumber,
+        itemIndex: i,
+        text: str,
+        x: x0,
+        y: y0,
+        width: fullWidth,
+        height,
+      });
+      continue;
+    }
+
+    const len = Math.max(1, str.length);
+    const pxPerChar = fullWidth / len;
+
+    spans.forEach((s, wi) => {
+      const x = x0 + s.start * pxPerChar;
+      const width = Math.max(6, (s.end - s.start) * pxPerChar);
+      boxes.push({
+        key: `${pageNumber}:${i}:${wi}`,
+        pageNumber,
+        itemIndex: i,
+        text: s.word,
+        x,
+        y: y0,
+        width,
+        height,
+      });
     });
   }
 
