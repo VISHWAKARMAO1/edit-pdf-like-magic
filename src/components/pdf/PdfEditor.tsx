@@ -18,6 +18,44 @@ import { cn } from "@/lib/utils";
 import type { PdfTextEdit, PdfTextItemBox } from "./pdfTypes";
 import { hexToRgb01 } from "./pdfColor";
 
+function rgbToHex(r: number, g: number, b: number): string {
+  const to = (n: number) => n.toString(16).padStart(2, "0");
+  return `#${to(r)}${to(g)}${to(b)}`;
+}
+
+function sampleCanvasBg(canvas: HTMLCanvasElement, box: PdfTextItemBox): string {
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return "#ffffff";
+  const cx = Math.round(box.x + box.width / 2);
+  const cy = Math.round(box.y + box.height / 2);
+  const size = 10;
+  const sx = clamp(cx - Math.floor(size / 2), 0, Math.max(0, canvas.width - 1));
+  const sy = clamp(cy - Math.floor(size / 2), 0, Math.max(0, canvas.height - 1));
+  const sw = clamp(size, 1, canvas.width - sx);
+  const sh = clamp(size, 1, canvas.height - sy);
+
+  try {
+    const img = ctx.getImageData(sx, sy, sw, sh);
+    const d = img.data;
+    let r = 0,
+      g = 0,
+      b = 0,
+      n = 0;
+    for (let i = 0; i < d.length; i += 4) {
+      const a = d[i + 3];
+      if (a < 16) continue;
+      r += d[i];
+      g += d[i + 1];
+      b += d[i + 2];
+      n++;
+    }
+    if (n === 0) return "#ffffff";
+    return rgbToHex(Math.round(r / n), Math.round(g / n), Math.round(b / n));
+  } catch {
+    return "#ffffff";
+  }
+}
+
 // Configure PDF.js worker for Vite.
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   "pdfjs-dist/build/pdf.worker.min.mjs",
@@ -175,7 +213,7 @@ export default function PdfEditor() {
     }));
   };
 
-  const upsertFromBox = (box: PdfTextItemBox) => {
+  const upsertFromBox = (box: PdfTextItemBox, bgColorHex?: string) => {
     setEdits((prev) => {
       const existing = prev[box.key];
       const next: PdfTextEdit = existing ?? {
@@ -189,6 +227,8 @@ export default function PdfEditor() {
         newText: box.text,
         fontSize: clamp(Math.round(box.height * 0.9), 8, 48),
         colorHex: "#111827", // roughly foreground in light mode
+        bgColorHex: bgColorHex ?? "#ffffff",
+        padding: 2,
       };
       return { ...prev, [box.key]: next };
     });
@@ -228,22 +268,27 @@ export default function PdfEditor() {
       for (const edit of editList) {
         const page = doc.getPage(edit.pageNumber - 1);
         const pageHeight = page.getHeight();
-        const yPdf = pageHeight - (edit.y + edit.height);
+        const pad = edit.padding ?? 2;
+        const xPdf = Math.max(0, edit.x - pad);
+        const yPdf = pageHeight - (edit.y + edit.height) - pad;
+        const wPdf = edit.width + pad * 2;
+        const hPdf = edit.height + pad * 2;
         const { r, g, b } = hexToRgb01(edit.colorHex);
+        const bg = hexToRgb01(edit.bgColorHex || "#ffffff");
 
         // Heuristic: cover original text by painting a white rectangle.
         // Works best on standard PDFs with white page background.
         page.drawRectangle({
-          x: edit.x,
+          x: xPdf,
           y: yPdf,
-          width: edit.width,
-          height: edit.height,
-          color: rgb(1, 1, 1),
+          width: wPdf,
+          height: hPdf,
+          color: rgb(bg.r, bg.g, bg.b),
         });
 
         page.drawText(edit.newText, {
           x: edit.x,
-          y: yPdf + Math.max(0, (edit.height - edit.fontSize) / 2),
+          y: yPdf + pad + Math.max(0, (edit.height - edit.fontSize) / 2),
           size: edit.fontSize,
           font,
           color: rgb(r, g, b),
@@ -352,6 +397,7 @@ export default function PdfEditor() {
                   onPickText={upsertFromBox}
                   onMoveActive={(key, nextX, nextY) => updateEdit(key, { x: nextX, y: nextY })}
                   onEditText={(key, nextText) => updateEdit(key, { newText: nextText })}
+                  onDoneEditing={() => setActiveKey(null)}
                 />
               ))
             )}
@@ -499,11 +545,12 @@ function PdfPage(props: {
   scale: number;
   edits: Record<string, PdfTextEdit>;
   activeKey: string | null;
-  onPickText: (box: PdfTextItemBox) => void;
+  onPickText: (box: PdfTextItemBox, bgColorHex?: string) => void;
   onMoveActive: (key: string, nextX: number, nextY: number) => void;
   onEditText: (key: string, nextText: string) => void;
+  onDoneEditing: () => void;
 }) {
-  const { pdf, pageNumber, scale, edits, activeKey, onPickText, onMoveActive, onEditText } = props;
+  const { pdf, pageNumber, scale, edits, activeKey, onPickText, onMoveActive, onEditText, onDoneEditing } = props;
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const [viewport, setViewport] = useState<any>(null);
   const [boxes, setBoxes] = useState<PdfTextItemBox[]>([]);
@@ -586,7 +633,11 @@ function PdfPage(props: {
                   isActive && "border-ring"
                 )}
                 style={{ left: b.x, top: b.y, width: b.width, height: b.height }}
-                onClick={() => onPickText(b)}
+                onClick={() => {
+                  const canvas = canvasRef.current;
+                  const bg = canvas ? sampleCanvasBg(canvas, b) : "#ffffff";
+                  onPickText(b, bg);
+                }}
                 aria-label={`Edit text: ${b.text}`}
               />
             );
@@ -615,6 +666,7 @@ function PdfPage(props: {
             key={`inline-${activeEdit.key}-${activeEdit.x}-${activeEdit.y}`}
             edit={activeEdit}
             onChange={(t) => onEditText(activeEdit.key, t)}
+            onDone={onDoneEditing}
           />
         ) : null}
       </div>
@@ -625,8 +677,9 @@ function PdfPage(props: {
 function InlineTextEditor(props: {
   edit: PdfTextEdit;
   onChange: (next: string) => void;
+  onDone: () => void;
 }) {
-  const { edit, onChange } = props;
+  const { edit, onChange, onDone } = props;
   const inputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
@@ -644,16 +697,23 @@ function InlineTextEditor(props: {
         value={edit.newText}
         onChange={(e) => onChange(e.target.value)}
         onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
+            (e.currentTarget as HTMLInputElement).blur();
+            onDone();
+          }
           if (e.key === "Escape") {
             (e.currentTarget as HTMLInputElement).blur();
+            onDone();
           }
         }}
-        className="h-full w-full rounded-sm border border-ring bg-background/90 px-1 outline-none"
+        className="h-full w-full rounded-sm border border-ring px-1 outline-none"
         style={{
           height: edit.height,
           fontSize: edit.fontSize,
           lineHeight: 1.05,
           color: edit.colorHex,
+          backgroundColor: edit.bgColorHex,
         }}
         aria-label="Edit selected PDF text"
       />
@@ -702,6 +762,7 @@ function DraggableOverlay(props: {
           "h-full w-full rounded-sm border",
           active ? "border-ring" : "border-transparent"
         )}
+        style={{ backgroundColor: edit.bgColorHex }}
       >
         <div
           className="h-full w-full whitespace-pre-wrap"
@@ -709,6 +770,7 @@ function DraggableOverlay(props: {
             fontSize: edit.fontSize,
             lineHeight: 1.05,
             color: edit.colorHex,
+            padding: edit.padding,
           }}
         >
           {edit.newText}

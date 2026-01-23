@@ -20,4 +20,6 @@ export type PdfTextEdit = {
   newText: string;
   fontSize: number;
   colorHex: string;
+  bgColorHex: string;
+  padding: number;
 };
