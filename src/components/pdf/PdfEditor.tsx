@@ -256,6 +256,7 @@ export default function PdfEditor() {
   const [previewBlob, setPreviewBlob] = useState<Blob | null>(null);
 
   const containerRef = useRef<HTMLDivElement | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   useEffect(() => {
     if (!pdfBytes) return;
@@ -444,50 +445,117 @@ export default function PdfEditor() {
 
   return (
     <div className="w-full">
-      <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
-        <section className="min-w-0">
-          <Card className="p-3">
-            <div className="flex flex-wrap items-center gap-3">
-              <Label
-                htmlFor="pdf-upload"
-                className="inline-flex items-center gap-2"
-              >
-                <span className="text-sm font-medium">PDF</span>
-              </Label>
-              <Input
-                id="pdf-upload"
-                type="file"
-                accept="application/pdf"
-                onChange={(e) => {
-                  const f = e.target.files?.[0];
-                  if (f) void onUpload(f);
-                }}
-              />
+      {/* Hidden file input (Sejda-style button triggers this) */}
+      <input
+        ref={fileInputRef}
+        type="file"
+        accept="application/pdf"
+        className="sr-only"
+        onChange={(e) => {
+          const f = e.target.files?.[0];
+          if (f) void onUpload(f);
+        }}
+      />
 
-              <div className="ml-auto flex items-center gap-2">
+      {!pdfProxy ? (
+        <section className="relative overflow-hidden rounded-lg border border-border bg-background">
+          <div
+            aria-hidden
+            className="absolute inset-x-0 top-24 h-[320px]"
+            style={{
+              background:
+                "radial-gradient(1200px 220px at 50% 0%, hsl(var(--muted)) 0%, transparent 70%)",
+            }}
+          />
+
+          <div className="relative mx-auto max-w-[1000px] px-4 py-16 md:py-20">
+            <div className="text-center">
+              <h1 className="text-balance text-4xl font-semibold tracking-tight md:text-6xl">
+                Online PDF editor
+                <span className="ml-2 align-super text-xs font-semibold tracking-widest text-muted-foreground">
+                  BETA
+                </span>
+              </h1>
+              <p className="mt-3 text-pretty text-base text-muted-foreground md:text-lg">
+                Edit PDF files for free. Replace words and export.
+              </p>
+
+              <div className="mt-10 flex flex-col items-center justify-center gap-3">
                 <Button
-                  variant="secondary"
-                  onClick={() => setScale((s) => clamp(Number((s - 0.1).toFixed(2)), 0.75, 2.2))}
-                  disabled={!pdfProxy}
+                  size="lg"
+                  className="px-10"
+                  onClick={() => fileInputRef.current?.click()}
+                  disabled={isLoading}
                 >
-                  -
+                  Upload PDF file
                 </Button>
-                <div className="min-w-[64px] text-center text-sm text-muted-foreground">
-                  {Math.round(scale * 100)}%
-                </div>
-                <Button
-                  variant="secondary"
-                  onClick={() => setScale((s) => clamp(Number((s + 0.1).toFixed(2)), 0.75, 2.2))}
-                  disabled={!pdfProxy}
-                >
-                  +
-                </Button>
-                <Button onClick={() => void exportPdf()} disabled={!pdfProxy || isLoading}>
-                  {isLoading ? "Working…" : "Export PDF"}
-                </Button>
+
+                <p className="mt-4 max-w-xl text-xs leading-relaxed text-muted-foreground">
+                  Files stay private in your browser. Best results with text-based PDFs.
+                </p>
               </div>
             </div>
-          </Card>
+          </div>
+
+          <div aria-hidden className="relative h-[170px] bg-background">
+            <svg
+              viewBox="0 0 1440 160"
+              preserveAspectRatio="none"
+              className="absolute inset-x-0 bottom-0 h-full w-[1600px] max-w-none"
+            >
+              <path
+                d="M0,64L120,69.3C240,75,480,85,720,80C960,75,1200,53,1320,42.7L1440,32L1440,160L1320,160C1200,160,960,160,720,160C480,160,240,160,120,160L0,160Z"
+                className="fill-muted"
+              />
+              <path
+                d="M0,96L120,90.7C240,85,480,75,720,74.7C960,75,1200,85,1320,90.7L1440,96L1440,160L1320,160C1200,160,960,160,720,160C480,160,240,160,120,160L0,160Z"
+                className="fill-accent"
+                opacity="0.6"
+              />
+            </svg>
+          </div>
+        </section>
+      ) : (
+        <div className="grid gap-4 lg:grid-cols-[1fr_360px]">
+          <section className="min-w-0">
+            <Card className="p-3">
+              <div className="flex flex-wrap items-center gap-3">
+                <Button variant="secondary" onClick={() => fileInputRef.current?.click()}>
+                  Change PDF
+                </Button>
+
+                <div className="ml-auto flex items-center gap-2">
+                  <Button
+                    variant="secondary"
+                    onClick={() =>
+                      setScale((s) =>
+                        clamp(Number((s - 0.1).toFixed(2)), 0.75, 2.2)
+                      )
+                    }
+                    disabled={!pdfProxy}
+                  >
+                    -
+                  </Button>
+                  <div className="min-w-[64px] text-center text-sm text-muted-foreground">
+                    {Math.round(scale * 100)}%
+                  </div>
+                  <Button
+                    variant="secondary"
+                    onClick={() =>
+                      setScale((s) =>
+                        clamp(Number((s + 0.1).toFixed(2)), 0.75, 2.2)
+                      )
+                    }
+                    disabled={!pdfProxy}
+                  >
+                    +
+                  </Button>
+                  <Button onClick={() => void exportPdf()} disabled={!pdfProxy || isLoading}>
+                    {isLoading ? "Working…" : "Export PDF"}
+                  </Button>
+                </div>
+              </div>
+            </Card>
 
           <Dialog
             open={previewOpen}
@@ -544,35 +612,21 @@ export default function PdfEditor() {
             </DialogContent>
           </Dialog>
 
-          <div
-            ref={containerRef}
-            className="mt-4 space-y-6"
-            aria-busy={isLoading}
-          >
-            {!pdfProxy ? (
-              <Card className="p-10">
-                <div className="text-center">
-                  <p className="text-sm text-muted-foreground">
-                    Upload a PDF to start editing.
-                  </p>
-                </div>
-              </Card>
-            ) : (
-              Array.from({ length: numPages }).map((_, idx) => (
-                <PdfPage
-                  key={`page-${idx + 1}`}
-                  pdf={pdfProxy}
-                  pageNumber={idx + 1}
-                  scale={scale}
-                  edits={edits}
-                  activeKey={activeKey}
-                  onPickText={upsertFromBox}
-                  onMoveActive={(key, nextX, nextY) => updateEdit(key, { x: nextX, y: nextY })}
-                  onEditText={(key, nextText) => updateEdit(key, { newText: nextText })}
-                  onDoneEditing={() => setActiveKey(null)}
-                />
-              ))
-            )}
+          <div ref={containerRef} className="mt-4 space-y-6" aria-busy={isLoading}>
+            {Array.from({ length: numPages }).map((_, idx) => (
+              <PdfPage
+                key={`page-${idx + 1}`}
+                pdf={pdfProxy}
+                pageNumber={idx + 1}
+                scale={scale}
+                edits={edits}
+                activeKey={activeKey}
+                onPickText={upsertFromBox}
+                onMoveActive={(key, nextX, nextY) => updateEdit(key, { x: nextX, y: nextY })}
+                onEditText={(key, nextText) => updateEdit(key, { newText: nextText })}
+                onDoneEditing={() => setActiveKey(null)}
+              />
+            ))}
           </div>
         </section>
 
@@ -587,9 +641,7 @@ export default function PdfEditor() {
 
             {!activeEdit ? (
               <div className="rounded-md border border-border bg-card p-4">
-                <p className="text-sm text-muted-foreground">
-                  No text selected yet.
-                </p>
+                <p className="text-sm text-muted-foreground">No text selected yet.</p>
               </div>
             ) : (
               <div className="space-y-4">
@@ -707,6 +759,7 @@ export default function PdfEditor() {
           </Card>
         </aside>
       </div>
+      )}
     </div>
   );
 }
