@@ -464,7 +464,7 @@ function PdfPage(props: {
         <canvas ref={canvasRef} className="block" />
 
         {/* Click targets for existing PDF text */}
-        <div className="pointer-events-none absolute inset-0">
+        <div className="pointer-events-none absolute inset-0 z-10">
           {boxes.map((b) => {
             const isActive = activeKey === b.key;
             return (
@@ -485,7 +485,8 @@ function PdfPage(props: {
         </div>
 
         {/* Visual overlay of edited text + drag handle for active edit */}
-        <div className="absolute inset-0">
+        {/* pointer-events-none here is critical so it doesn't block clicks on the text buttons */}
+        <div className="pointer-events-none absolute inset-0 z-20">
           {pageEdits.map((e) => {
             const isActive = e.key === activeOnThisPage;
             return (
@@ -515,7 +516,8 @@ function DraggableOverlay(props: {
     <div
       className={cn(
         "absolute select-none",
-        active ? "cursor-move" : "pointer-events-none"
+        // The parent wrapper is pointer-events-none; re-enable only for the active edit.
+        active ? "pointer-events-auto cursor-move" : "pointer-events-none"
       )}
       style={{ left: edit.x, top: edit.y, width: edit.width, height: edit.height }}
       onPointerDown={(ev) => {
