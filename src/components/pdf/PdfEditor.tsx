@@ -162,27 +162,59 @@ function presetToCssFont(preset: PdfFontPreset, detected?: string): string {
 }
 
 function sampleCanvasBgAroundBox(canvas: HTMLCanvasElement, box: PdfTextItemBox): string {
-  // Sample INSIDE the box and ignore dark pixels (glyphs).
-  // This matches gradients/textured backgrounds better than outside sampling,
-  // and prevents the cover from looking like a "highlight".
+  // Sample background colors *around/inside* the selection, excluding glyph strokes.
+  // Use a median (not mean) to reduce edge/antialiasing bias that can look like a “highlight”.
   const ctx = canvas.getContext("2d");
   if (!ctx) return "#ffffff";
 
-  const sx = clamp(Math.floor(box.x), 0, Math.max(0, canvas.width - 1));
-  const sy = clamp(Math.floor(box.y), 0, Math.max(0, canvas.height - 1));
-  const sw = clamp(Math.ceil(box.width), 1, canvas.width - sx);
-  const sh = clamp(Math.ceil(box.height), 1, canvas.height - sy);
+  const margin = 2;
+  const sx = clamp(Math.floor(box.x - margin), 0, Math.max(0, canvas.width - 1));
+  const sy = clamp(Math.floor(box.y - margin), 0, Math.max(0, canvas.height - 1));
+  const sw = clamp(Math.ceil(box.width + margin * 2), 1, canvas.width - sx);
+  const sh = clamp(Math.ceil(box.height + margin * 2), 1, canvas.height - sy);
+
+  const median = (arr: number[]) => {
+    if (!arr.length) return 255;
+    const a = [...arr].sort((x, y) => x - y);
+    return a[Math.floor(a.length / 2)];
+  };
+
+  const samplePointsOutside = (): string => {
+    // Sample 4 points just outside the box corners.
+    const pts = [
+      { x: Math.floor(box.x - 3), y: Math.floor(box.y - 3) },
+      { x: Math.floor(box.x + box.width + 3), y: Math.floor(box.y - 3) },
+      { x: Math.floor(box.x - 3), y: Math.floor(box.y + box.height + 3) },
+      { x: Math.floor(box.x + box.width + 3), y: Math.floor(box.y + box.height + 3) },
+    ];
+    const rs: number[] = [];
+    const gs: number[] = [];
+    const bs: number[] = [];
+    for (const p of pts) {
+      const x = clamp(p.x, 0, canvas.width - 1);
+      const y = clamp(p.y, 0, canvas.height - 1);
+      try {
+        const d = ctx.getImageData(x, y, 1, 1).data;
+        if (d[3] < 32) continue;
+        rs.push(d[0]);
+        gs.push(d[1]);
+        bs.push(d[2]);
+      } catch {
+        // ignore
+      }
+    }
+    if (!rs.length) return "#ffffff";
+    return rgbToHex(Math.round(rs.reduce((s, v) => s + v, 0) / rs.length), Math.round(gs.reduce((s, v) => s + v, 0) / gs.length), Math.round(bs.reduce((s, v) => s + v, 0) / bs.length));
+  };
 
   try {
     const img = ctx.getImageData(sx, sy, sw, sh);
     const d = img.data;
-    let r = 0,
-      g = 0,
-      b = 0,
-      n = 0;
 
-    // Ignore pixels likely belonging to text strokes.
-    // Heuristic: skip low alpha, and skip "dark" pixels.
+    const rs: number[] = [];
+    const gs: number[] = [];
+    const bs: number[] = [];
+
     for (let i = 0; i < d.length; i += 4) {
       const a = d[i + 3];
       if (a < 32) continue;
@@ -190,21 +222,21 @@ function sampleCanvasBgAroundBox(canvas: HTMLCanvasElement, box: PdfTextItemBox)
       const gg = d[i + 1];
       const bb = d[i + 2];
       const luminance = 0.2126 * rr + 0.7152 * gg + 0.0722 * bb;
-      // Most text is darker than background.
-      if (luminance < 130) continue;
-      r += rr;
-      g += gg;
-      b += bb;
-      n++;
+      // Skip darker pixels (likely text strokes / antialias edges).
+      if (luminance < 155) continue;
+      rs.push(rr);
+      gs.push(gg);
+      bs.push(bb);
     }
 
-    if (n < 10) {
-      // Fallback to center sampling if the heuristic removed too much.
-      return sampleCanvasBg(canvas, box);
+    if (rs.length < 20) {
+      // If the selection is on a dark background or very small text, outside points are safer than center.
+      return samplePointsOutside();
     }
-    return rgbToHex(Math.round(r / n), Math.round(g / n), Math.round(b / n));
+
+    return rgbToHex(median(rs), median(gs), median(bs));
   } catch {
-    return sampleCanvasBg(canvas, box);
+    return samplePointsOutside();
   }
 }
 
