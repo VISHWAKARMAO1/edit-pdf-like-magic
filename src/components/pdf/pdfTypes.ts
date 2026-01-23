@@ -3,11 +3,14 @@ export type PdfTextItemBox = {
   pageNumber: number;
   itemIndex: number;
   text: string;
+  fontFamily?: string;
   x: number;
   y: number;
   width: number;
   height: number;
 };
+
+export type PdfFontPreset = "auto" | "helvetica" | "times" | "courier";
 
 export type PdfTextEdit = {
   key: string;
@@ -19,6 +22,8 @@ export type PdfTextEdit = {
   originalText: string;
   newText: string;
   fontSize: number;
+  fontPreset: PdfFontPreset;
+  detectedFontFamily?: string;
   colorHex: string;
   bgColorHex: string;
   /** Data URL (PNG) snapshot of the background under the original text. */

@@ -18,12 +18,19 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
 import { Slider } from "@/components/ui/slider";
 import { toast } from "@/hooks/use-toast";
 import { cn } from "@/lib/utils";
 
-import type { PdfTextEdit, PdfTextItemBox } from "./pdfTypes";
+import type { PdfFontPreset, PdfTextEdit, PdfTextItemBox } from "./pdfTypes";
 import { hexToRgb01 } from "./pdfColor";
 import { PdfExportPreview } from "./PdfExportPreview";
 
@@ -62,6 +69,67 @@ function sampleCanvasBg(canvas: HTMLCanvasElement, box: PdfTextItemBox): string 
     return rgbToHex(Math.round(r / n), Math.round(g / n), Math.round(b / n));
   } catch {
     return "#ffffff";
+  }
+}
+
+function sampleCanvasTextColor(canvas: HTMLCanvasElement, box: PdfTextItemBox): string {
+  // Sample darker pixels INSIDE the box (likely glyph strokes) to approximate the original text color.
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return "#111827";
+
+  const sx = clamp(Math.floor(box.x), 0, Math.max(0, canvas.width - 1));
+  const sy = clamp(Math.floor(box.y), 0, Math.max(0, canvas.height - 1));
+  const sw = clamp(Math.ceil(box.width), 1, canvas.width - sx);
+  const sh = clamp(Math.ceil(box.height), 1, canvas.height - sy);
+
+  try {
+    const img = ctx.getImageData(sx, sy, sw, sh);
+    const d = img.data;
+    const picks: Array<{ r: number; g: number; b: number; lum: number }> = [];
+
+    for (let i = 0; i < d.length; i += 4) {
+      const a = d[i + 3];
+      if (a < 32) continue;
+      const r = d[i];
+      const g = d[i + 1];
+      const b = d[i + 2];
+      const lum = 0.2126 * r + 0.7152 * g + 0.0722 * b;
+      if (lum > 130) continue; // ignore background-ish pixels
+      picks.push({ r, g, b, lum });
+    }
+
+    if (picks.length < 10) return "#111827";
+    picks.sort((a, b) => a.lum - b.lum);
+    const slice = picks.slice(0, Math.min(200, picks.length));
+    const rr = Math.round(slice.reduce((s, p) => s + p.r, 0) / slice.length);
+    const gg = Math.round(slice.reduce((s, p) => s + p.g, 0) / slice.length);
+    const bb = Math.round(slice.reduce((s, p) => s + p.b, 0) / slice.length);
+    return rgbToHex(rr, gg, bb);
+  } catch {
+    return "#111827";
+  }
+}
+
+function guessFontPreset(fontFamily?: string): PdfFontPreset {
+  const f = (fontFamily || "").toLowerCase();
+  if (f.includes("courier") || f.includes("mono")) return "courier";
+  if (f.includes("times") || f.includes("serif")) return "times";
+  if (f.includes("helvetica") || f.includes("arial") || f.includes("sans")) return "helvetica";
+  return "auto";
+}
+
+function presetToCssFont(preset: PdfFontPreset, detected?: string): string {
+  switch (preset) {
+    case "courier":
+      return "ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, 'Liberation Mono', 'Courier New', monospace";
+    case "times":
+      return "ui-serif, Georgia, Cambria, 'Times New Roman', Times, serif";
+    case "helvetica":
+      return "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, 'Noto Sans', sans-serif";
+    case "auto":
+    default:
+      // Use detected first for on-screen; export maps to a closest standard font.
+      return detected || "ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, 'Noto Sans', sans-serif";
   }
 }
 
@@ -179,6 +247,7 @@ function splitIntoWordSpans(str: string): { word: string; start: number; end: nu
 
 function getItemBoxes(textContent: any, viewport: any, pageNumber: number): PdfTextItemBox[] {
   const items = textContent.items as any[];
+  const styles = (textContent.styles ?? {}) as Record<string, any>;
   const boxes: PdfTextItemBox[] = [];
 
   for (let i = 0; i < items.length; i++) {
@@ -205,6 +274,8 @@ function getItemBoxes(textContent: any, viewport: any, pageNumber: number): PdfT
     // Word-level boxes: approximate by distributing the item's width by character positions.
     // This makes “replace only that word” possible for most text PDFs.
     const str: string = item.str;
+    const fontName: string | undefined = item.fontName;
+    const fontFamily: string | undefined = fontName ? styles[fontName]?.fontFamily : undefined;
     const spans = splitIntoWordSpans(str);
 
     if (spans.length <= 1) {
@@ -213,6 +284,7 @@ function getItemBoxes(textContent: any, viewport: any, pageNumber: number): PdfT
         pageNumber,
         itemIndex: i,
         text: str,
+        fontFamily,
         x: x0,
         y: y0,
         width: fullWidth,
@@ -232,6 +304,7 @@ function getItemBoxes(textContent: any, viewport: any, pageNumber: number): PdfT
         pageNumber,
         itemIndex: i,
         text: s.word,
+        fontFamily,
         x,
         y: y0,
         width,
@@ -342,9 +415,14 @@ export default function PdfEditor() {
     });
   };
 
-  const upsertFromBox = (box: PdfTextItemBox, opts?: { bgColorHex?: string }) => {
+  const upsertFromBox = (
+    box: PdfTextItemBox,
+    opts?: { bgColorHex?: string; colorHex?: string }
+  ) => {
     setEdits((prev) => {
       const existing = prev[box.key];
+      const detectedFontFamily = box.fontFamily;
+      const defaultPreset = guessFontPreset(detectedFontFamily);
       const next: PdfTextEdit = existing ?? {
         key: box.key,
         pageNumber: box.pageNumber,
@@ -355,7 +433,9 @@ export default function PdfEditor() {
         originalText: box.text,
         newText: box.text,
         fontSize: clamp(Math.round(box.height * 0.9), 8, 48),
-        colorHex: "#111827", // roughly foreground in light mode
+        fontPreset: defaultPreset,
+        detectedFontFamily,
+        colorHex: opts?.colorHex ?? "#111827",
         bgColorHex: opts?.bgColorHex ?? "#ffffff",
         // Slight padding helps cover antialiasing edges.
         padding: 2,
@@ -392,7 +472,6 @@ export default function PdfEditor() {
 
     // IMPORTANT: pass a copy to pdf-lib as well.
     const doc = await PDFDocument.load(pdfBytes.slice());
-    const font = await doc.embedFont(StandardFonts.Helvetica);
 
     for (const edit of editList) {
       const page = doc.getPage(edit.pageNumber - 1);
@@ -421,6 +500,15 @@ export default function PdfEditor() {
       const hPdf = h0 + padPdf * 2;
       const { r, g, b } = hexToRgb01(edit.colorHex);
       const bg = hexToRgb01(edit.bgColorHex || "#ffffff");
+
+      const fontPreset: PdfFontPreset = edit.fontPreset ?? "auto";
+      const fontName =
+        fontPreset === "times"
+          ? StandardFonts.TimesRoman
+          : fontPreset === "courier"
+            ? StandardFonts.Courier
+            : StandardFonts.Helvetica;
+      const font = await doc.embedFont(fontName);
 
       // Cover original then draw the new text.
       page.drawRectangle({
@@ -752,6 +840,27 @@ export default function PdfEditor() {
 
                 <div className="grid grid-cols-2 gap-3">
                   <div className="space-y-2">
+                    <Label>Font</Label>
+                    <Select
+                      value={activeEdit.fontPreset}
+                      onValueChange={(v) => updateEdit(activeEdit.key, { fontPreset: v as PdfFontPreset })}
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder="Auto" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="auto">Auto (match)</SelectItem>
+                        <SelectItem value="helvetica">Sans</SelectItem>
+                        <SelectItem value="times">Serif</SelectItem>
+                        <SelectItem value="courier">Mono</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <div className="text-xs text-muted-foreground">
+                      Detected: {activeEdit.detectedFontFamily ?? "Unknown"}
+                    </div>
+                  </div>
+
+                  <div className="space-y-2">
                     <Label htmlFor="font-size">Font size</Label>
                     <div className="px-1">
                       <Slider
@@ -811,7 +920,7 @@ function PdfPage(props: {
   scale: number;
   edits: Record<string, PdfTextEdit>;
   activeKey: string | null;
-  onPickText: (box: PdfTextItemBox, opts?: { bgColorHex?: string }) => void;
+  onPickText: (box: PdfTextItemBox, opts?: { bgColorHex?: string; colorHex?: string }) => void;
   onMoveActive: (key: string, nextX: number, nextY: number) => void;
   onEditText: (key: string, nextText: string) => void;
   onDoneEditing: () => void;
@@ -906,7 +1015,8 @@ function PdfPage(props: {
                   const bgColorHex = canvas
                     ? sampleCanvasBgAroundBox(canvas, b)
                     : "#ffffff";
-                  onPickText(b, { bgColorHex });
+                  const colorHex = canvas ? sampleCanvasTextColor(canvas, b) : "#111827";
+                  onPickText(b, { bgColorHex, colorHex });
                 }}
                 aria-label={`Edit text: ${b.text}`}
               />
