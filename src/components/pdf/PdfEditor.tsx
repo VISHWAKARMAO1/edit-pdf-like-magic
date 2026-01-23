@@ -47,14 +47,22 @@ function getItemBoxes(textContent: any, viewport: any, pageNumber: number): PdfT
     const item = items[i];
     if (!item.str?.trim()) continue;
 
-    // Transform the text item to viewport space.
-    // tx = [a, b, c, d, e, f] where e,f is the translation.
-    // In viewport space, origin is top-left.
-    const tx = pdfjsLib.Util.transform(viewport.transform, item.transform);
-    const x = tx[4];
-    const y = tx[5];
-    const height = Math.hypot(tx[2], tx[3]);
-    const width = item.width * viewport.scale;
+    // More reliable approach across PDFs:
+    // Build a rectangle in *PDF page coordinates* then convert to viewport.
+    // item.transform is [a,b,c,d,e,f] where (e,f) is text origin in PDF units.
+    const tf: number[] | undefined = item.transform;
+    const e = tf?.[4] ?? 0;
+    const f = tf?.[5] ?? 0;
+    const w = Math.abs(item.width ?? 0);
+    const h = Math.abs(tf?.[3] ?? item.height ?? 0);
+
+    if (!Number.isFinite(e) || !Number.isFinite(f) || w <= 0 || h <= 0) continue;
+
+    const rect = viewport.convertToViewportRectangle([e, f, e + w, f + h]);
+    const x = Math.min(rect[0], rect[2]);
+    const y = Math.min(rect[1], rect[3]);
+    const width = Math.max(6, Math.abs(rect[2] - rect[0]));
+    const height = Math.max(6, Math.abs(rect[3] - rect[1]));
 
     boxes.push({
       key: `${pageNumber}:${i}`,
@@ -62,7 +70,7 @@ function getItemBoxes(textContent: any, viewport: any, pageNumber: number): PdfT
       itemIndex: i,
       text: item.str,
       x,
-      y: y - height,
+      y,
       width,
       height,
     });
