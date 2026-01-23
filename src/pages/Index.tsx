@@ -76,7 +76,7 @@ const Index = () => {
           title: "Merge",
           desc: "Combine multiple PDFs and images into one.",
           icon: Combine,
-          to: "/editor",
+          to: "/merge",
         },
         {
           title: "Organize",
