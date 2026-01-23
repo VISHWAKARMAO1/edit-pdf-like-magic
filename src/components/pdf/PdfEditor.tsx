@@ -583,7 +583,10 @@ export default function PdfEditor() {
 
               <div className="h-[70vh] w-full overflow-hidden rounded-md border border-border">
                 {previewBytes ? (
-                  <PdfExportPreview bytes={previewBytes} />
+                  <PdfExportPreview
+                    bytes={previewBytes}
+                    highlights={Object.values(edits)}
+                  />
                 ) : (
                   <div className="flex h-full w-full items-center justify-center text-sm text-muted-foreground">
                     Generating preview…

@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import * as pdfjsLib from "pdfjs-dist/build/pdf.mjs";
 
 import { cn } from "@/lib/utils";
+import type { PdfTextEdit } from "./pdfTypes";
 
 // Ensure worker is configured (safe to run multiple times)
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
@@ -15,9 +16,23 @@ type PdfExportPreviewProps = {
   bytes: Uint8Array;
   className?: string;
   scale?: number;
+  highlights?: PdfTextEdit[];
 };
 
-export function PdfExportPreview({ bytes, className, scale = 1.1 }: PdfExportPreviewProps) {
+function getPrimaryHsl(): string {
+  // returns "H S% L%" (e.g. "160 78% 36%")
+  const v = getComputedStyle(document.documentElement)
+    .getPropertyValue("--primary")
+    .trim();
+  return v || "160 78% 36%";
+}
+
+export function PdfExportPreview({
+  bytes,
+  className,
+  scale = 1.1,
+  highlights = [],
+}: PdfExportPreviewProps) {
   const [doc, setDoc] = useState<any>(null);
   const [numPages, setNumPages] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
@@ -48,6 +63,10 @@ export function PdfExportPreview({ bytes, className, scale = 1.1 }: PdfExportPre
     if (!doc || numPages <= 0) return;
     let cancelled = false;
 
+    const primary = getPrimaryHsl();
+    const fill = `hsl(${primary} / 0.20)`;
+    const stroke = `hsl(${primary} / 0.95)`;
+
     (async () => {
       for (let i = 1; i <= numPages; i++) {
         if (cancelled) return;
@@ -65,13 +84,32 @@ export function PdfExportPreview({ bytes, className, scale = 1.1 }: PdfExportPre
 
         const renderTask = page.render({ canvasContext: ctx, viewport: vp } as any);
         await renderTask.promise;
+
+        // Draw edit highlights on top of the rendered page.
+        const pageEdits = highlights.filter((h) => h.pageNumber === i && h.newText !== h.originalText);
+        if (pageEdits.length) {
+          ctx.save();
+          ctx.fillStyle = fill;
+          ctx.strokeStyle = stroke;
+          ctx.lineWidth = Math.max(1, Math.round(1 * scale));
+          for (const e of pageEdits) {
+            const pad = e.padding ?? 2;
+            const x = e.x - pad;
+            const y = e.y - pad;
+            const w = e.width + pad * 2;
+            const h = e.height + pad * 2;
+            ctx.fillRect(x, y, w, h);
+            ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+          }
+          ctx.restore();
+        }
       }
     })();
 
     return () => {
       cancelled = true;
     };
-  }, [doc, numPages, scale]);
+  }, [doc, numPages, scale, highlights]);
 
   if (isLoading) {
     return (
