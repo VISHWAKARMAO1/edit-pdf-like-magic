@@ -68,6 +68,27 @@ const About: React.FC = () => {
           </p>
         </section>
 
+        <section className="mt-24 text-center">
+          <h2 className="text-4xl font-bold tracking-tight">Contact Us</h2>
+          <p className="mx-auto mt-6 max-w-3xl text-lg text-muted-foreground">
+            Have questions or feedback? We'd love to hear from you.
+          </p>
+          <div className="mt-8">
+            <p className="text-lg">
+              <strong>Name:</strong> [Your Name]
+            </p>
+            <p className="text-lg">
+              <strong>Email:</strong> [Your Email]
+            </p>
+            <p className="text-lg">
+              <strong>GitHub:</strong> [Your GitHub Profile]
+            </p>
+             <p className="text-lg">
+              <strong>LinkedIn:</strong> [Your LinkedIn Profile]
+            </p>
+          </div>
+        </section>
+
       </main>
     </div>
   );
