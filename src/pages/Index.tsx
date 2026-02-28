@@ -23,44 +23,6 @@ import {
   Layers3,
 } from "lucide-react";
 
-function WaveDivider() {
-  return (
-    <div aria-hidden className="relative w-full overflow-hidden">
-      <svg
-        viewBox="0 0 1440 140"
-        className="block h-[140px] w-[1600px] max-w-none"
-        preserveAspectRatio="none"
-      >
-        <path
-          d="M0,96L80,85.3C160,75,320,53,480,48C640,43,800,53,960,69.3C1120,85,1280,107,1360,117.3L1440,128L1440,140L1360,140C1280,140,1120,140,960,140C800,140,640,140,480,140C320,140,160,140,80,140L0,140Z"
-          className="fill-muted"
-        />
-        <path
-          d="M0,72L80,66.7C160,61,320,51,480,58.7C640,67,800,93,960,98.7C1120,104,1280,88,1360,80L1440,72L1440,140L1360,140C1280,140,1120,140,960,140C800,140,640,140,480,140C320,140,160,140,80,140L0,140Z"
-          className="fill-accent"
-          opacity="0.55"
-        />
-      </svg>
-    </div>
-  );
-}
-
-function Dots({ className }: { className?: string }) {
-  return (
-    <div
-      aria-hidden
-      className={cn("pointer-events-none absolute inset-0", className)}
-      style={{
-        backgroundImage:
-          "radial-gradient(hsl(var(--primary) / 0.18) 1px, transparent 1px)",
-        backgroundSize: "14px 14px",
-        maskImage:
-          "radial-gradient(circle at center, rgba(0,0,0,1), rgba(0,0,0,0.2), rgba(0,0,0,0))",
-      }}
-    />
-  );
-}
-
 const Index = () => {
   const toolGroups = [
     {
@@ -198,42 +160,38 @@ const Index = () => {
 
       <main>
         <section className="relative overflow-hidden">
-          <div className="relative mx-auto max-w-[1200px] px-4 py-16 md:py-24">
-            <Dots className="-z-10" />
-
+          <div className="container mx-auto max-w-6xl px-4 py-32 md:py-48">
             <div className="mx-auto max-w-3xl text-center">
-              <h1 className="text-balance text-4xl font-semibold tracking-tight md:text-6xl">
+              <h1 className="text-balance text-5xl font-extrabold tracking-tight md:text-7xl">
                 We help with your PDF tasks
               </h1>
-              <p className="mt-4 text-pretty text-lg text-muted-foreground md:text-xl">
+              <p className="mt-6 text-pretty text-lg text-muted-foreground md:text-xl">
                 Easy, pleasant and productive PDF editor.
               </p>
 
-              <div className="mt-8 flex flex-col items-center justify-center gap-3 sm:flex-row">
-                <Button asChild size="lg" className="px-8">
+              <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+                <Button asChild size="lg" className="px-8 bg-gradient-to-r from-primary to-purple-600 text-primary-foreground shadow-lg hover:shadow-xl transition-shadow">
                   <NavLink to="/editor" activeClassName="">
                     Edit a PDF document — it’s free
                   </NavLink>
                 </Button>
-                <Button asChild size="lg" variant="secondary" className="px-8">
-                  <NavLink to="#tools" activeClassName="">
+                <Button asChild size="lg" variant="secondary" className="px-8 shadow-sm hover:shadow-md transition-shadow">
+                  <NavLink to="/browse-tools" activeClassName="">
                     Browse tools
                   </NavLink>
                 </Button>
               </div>
             </div>
           </div>
-
-          <WaveDivider />
         </section>
 
-        <section id="popular" className="bg-muted/40">
-          <div className="mx-auto max-w-[1200px] px-4 py-10">
-            <div className="text-xs font-semibold uppercase tracking-wider text-primary">
+        <section id="popular" className="py-16">
+          <div className="container mx-auto max-w-6xl px-4">
+            <div className="text-sm font-semibold uppercase tracking-wider text-primary">
               Most popular
             </div>
 
-            <div className="mt-4 grid gap-4 md:grid-cols-3">
+            <div className="mt-6 grid gap-8 md:grid-cols-3">
               {[{
                 title: "PDF Editor",
                 desc: "Edit PDF files for free. Replace text and export.",
@@ -249,10 +207,10 @@ const Index = () => {
                 desc: "Remove pages from a document.",
                 to: "/delete-pages",
               }].map((c) => (
-                <Card key={c.title} className="p-5">
-                  <div className="text-base font-semibold">{c.title}</div>
-                  <p className="mt-2 text-sm text-muted-foreground">{c.desc}</p>
-                  <Button asChild className="mt-4" variant="secondary">
+                <Card key={c.title} className="glass p-6 rounded-2xl transform hover:-translate-y-2 transition-transform">
+                  <div className="text-lg font-semibold">{c.title}</div>
+                  <p className="mt-2 text-muted-foreground">{c.desc}</p>
+                  <Button asChild className="mt-6" variant="secondary">
                     <NavLink to={c.to} activeClassName="">
                       Open
                     </NavLink>
@@ -263,35 +221,35 @@ const Index = () => {
           </div>
         </section>
 
-        {/* Tools grid (Sejda-style) */}
-        <section id="tools" className="bg-muted/40">
-          <div className="mx-auto max-w-[1200px] px-4 pb-14 pt-2">
+        {/* Tools grid */}
+        <section id="tools" className="py-16">
+          <div className="container mx-auto max-w-6xl px-4">
             {toolGroups.map((group) => (
-              <div key={group.label} className="mt-10">
-                <div className="text-xs font-semibold uppercase tracking-wider text-primary">
+              <div key={group.label} className="mt-16 first:mt-0">
+                <div className="text-sm font-semibold uppercase tracking-wider text-primary">
                   {group.label}
                 </div>
 
-                <div className="mt-4 grid gap-4 md:grid-cols-3 lg:grid-cols-4">
+                <div className="mt-6 grid gap-8 md:grid-cols-3 lg:grid-cols-4">
                   {group.items.map((t) => {
                     const Icon = t.icon;
                     return (
-                      <Card key={`${group.label}-${t.title}`} className="p-5">
-                        <div className="flex items-start gap-3">
-                          <div className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-accent text-accent-foreground">
-                            <Icon className="h-4 w-4" />
+                      <Card key={`${group.label}-${t.title}`} className="glass p-6 rounded-2xl transform hover:-translate-y-2 transition-transform">
+                        <div className="flex items-start gap-4">
+                          <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
+                            <Icon className="h-6 w-6" />
                           </div>
                           <div className="min-w-0">
-                            <div className="text-sm font-semibold leading-tight">
+                            <div className="text-lg font-semibold leading-tight">
                               {t.title}
                             </div>
-                            <p className="mt-1 text-xs text-muted-foreground">
+                            <p className="mt-2 text-sm text-muted-foreground">
                               {t.desc}
                             </p>
                           </div>
                         </div>
 
-                        <Button asChild className="mt-4" variant="secondary">
+                        <Button asChild className="mt-6" variant="secondary">
                           <NavLink to={t.to} activeClassName="">
                             Open
                           </NavLink>

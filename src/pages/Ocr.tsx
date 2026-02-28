@@ -127,10 +127,10 @@ export default function Ocr() {
   };
 
   return (
-    <div className="flex min-h-screen flex-col bg-background text-foreground">
+    <div className="flex min-h-screen flex-col bg-background text-foreground pt-28">
       <TopNav variant="editor" />
 
-      <main className="mx-auto flex w-full max-w-[1200px] flex-1 flex-col gap-6 px-4 py-6">
+      <main className="mx-auto flex w-full max-w-[1200px] flex-1 flex-col gap-6 px-4 pb-6">
         <div>
           <h1 className="text-2xl font-semibold tracking-tight">OCR</h1>
           <p className="mt-1 text-sm text-muted-foreground">Extract text from a scanned PDF or image and download as .txt.</p>
