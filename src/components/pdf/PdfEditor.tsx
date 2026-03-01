@@ -1162,7 +1162,7 @@ function PdfPage(props: {
     return () => {
       cancelled = true;
     };
-  }, [pdf, pageNumber, scale]);
+  }, [pdf, pageNumber, scale, onViewport]);
 
   const activeOnThisPage = activeKey?.startsWith(`${pageNumber}:`) ? activeKey : null;
   const activeEdit = activeOnThisPage ? edits[activeOnThisPage] : null;

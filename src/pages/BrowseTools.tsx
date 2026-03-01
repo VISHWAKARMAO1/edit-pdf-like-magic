@@ -38,11 +38,6 @@ const tools = [
     howTo: "1. Upload multiple PDF files or images. 2. Drag and drop the files to set the desired order. 3. Click the 'Merge' button to combine them into a single PDF. 4. Download the merged file.",
   },
   {
-    name: "OCR",
-    description: "Extract text from scanned PDFs or images.",
-    howTo: "1. Upload a scanned PDF or an image file. 2. Select the language of the text in the document. 3. Click 'Start OCR'. 4. The tool will process the file and make the text selectable and searchable.",
-  },
-  {
     name: "Organize",
     description: "Reorder, rotate, or delete pages in a PDF.",
     howTo: "1. Upload a PDF. 2. Drag and drop page thumbnails to reorder them. 3. Use the rotate buttons on each thumbnail to change page orientation. 4. Click 'Save' to apply the changes.",

@@ -1,183 +1,69 @@
+import { useEffect, useRef } from "react";
 import { NavLink } from "@/components/NavLink";
 import { TopNav } from "@/components/layout/TopNav";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { cn } from "@/lib/utils";
-import {
-  Combine,
-  Columns2,
-  Layers,
-  Scissors,
-  Bookmark,
-  SplitSquareHorizontal,
-  Ruler,
-  Type,
-  PenLine,
-  FileText,
-  Trash2,
-  Minimize2,
-  ScanLine,
-  ShieldCheck,
-  KeyRound,
-  Stamp,
-  Layers3,
-} from "lucide-react";
+import { gsap } from "gsap";
 
 const Index = () => {
-  const toolGroups = [
-    {
-      label: "MERGE",
-      items: [
-        {
-          title: "Alternate & Mix",
-          desc: "Mix pages from 2 or more documents, alternating between them.",
-          icon: Columns2,
-          to: "/alternate-mix",
-        },
-        {
-          title: "Merge",
-          desc: "Combine multiple PDFs and images into one.",
-          icon: Combine,
-          to: "/merge",
-        },
-        {
-          title: "Organize",
-          desc: "Arrange and reorder PDF pages.",
-          icon: Layers,
-          to: "/organize",
-        },
-      ],
-    },
-    {
-      label: "SPLIT",
-      items: [
-        {
-          title: "Extract Pages",
-          desc: "Create a new document containing only the pages you need.",
-          icon: Scissors,
-          to: "/extract",
-        },
-        {
-          title: "Split by Pages",
-          desc: "Split specific page ranges or extract every page into separate PDFs.",
-          icon: SplitSquareHorizontal,
-          to: "/editor",
-        },
-        {
-          title: "Split by Bookmarks",
-          desc: "Split into documents using the PDF's table of contents.",
-          icon: Bookmark,
-          to: "/editor",
-        },
-        {
-          title: "Split by Size",
-          desc: "Get multiple smaller documents with specific file sizes.",
-          icon: Ruler,
-          to: "/editor",
-        },
-      ],
-    },
-    {
-      label: "EDIT & SIGN",
-      items: [
-        {
-          title: "PDF Editor",
-          desc: "Edit existing text, replace words, and export.",
-          icon: Type,
-          to: "/editor",
-        },
-        {
-          title: "Fill & Sign",
-          desc: "Add signatures and fill PDF forms.",
-          icon: PenLine,
-          to: "/fill-sign",
-        },
-        {
-          title: "Create Forms",
-          desc: "Make PDFs fillable by adding text fields and checkboxes.",
-          icon: FileText,
-          to: "/create-forms",
-        },
-        {
-          title: "Delete Pages",
-          desc: "Remove pages from a PDF.",
-          icon: Trash2,
-          to: "/delete-pages",
-        },
-      ],
-    },
-    {
-      label: "COMPRESS & SCANS",
-      items: [
-        {
-          title: "Compress",
-          desc: "Reduce the size of your PDF (coming soon).",
-          icon: Minimize2,
-          to: "/compress",
-        },
-        {
-          title: "Deskew",
-          desc: "Automatically straighten scanned pages (coming soon).",
-          icon: ScanLine,
-          to: "/editor",
-        },
-        {
-          title: "OCR",
-          desc: "Extract text from scanned PDFs or images.",
-          icon: Layers3,
-          to: "/ocr",
-        },
-      ],
-    },
-    {
-      label: "SECURITY",
-      items: [
-        {
-          title: "Protect",
-          desc: "Password-protect a PDF (coming soon).",
-          icon: ShieldCheck,
-          to: "/protect",
-        },
-        {
-          title: "Unlock",
-          desc: "Remove password protection (coming soon).",
-          icon: KeyRound,
-          to: "/unlock",
-        },
-        {
-          title: "Watermark",
-          desc: "Add a watermark to all pages.",
-          icon: Stamp,
-          to: "/watermark",
-        },
-      ],
-    },
-  ] as const;
+  const heroRef = useRef<HTMLElement | null>(null);
+  const gradientRef = useRef<HTMLDivElement | null>(null);
+  const sectionRef = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    const ctx = gsap.context(() => {
+      if (gradientRef.current) {
+        gsap.to(gradientRef.current, {
+          backgroundPosition: "200% 50%",
+          duration: 16,
+          ease: "none",
+          repeat: -1,
+          yoyo: true,
+        });
+      }
+
+      gsap.from(".home-reveal", {
+        y: 32,
+        opacity: 0,
+        duration: 0.9,
+        stagger: 0.12,
+        ease: "power2.out",
+      });
+    }, heroRef);
+
+    return () => ctx.revert();
+  }, []);
 
   return (
     <div className="min-h-screen bg-background text-foreground">
       <TopNav variant="home" />
 
       <main>
-        <section className="relative overflow-hidden">
-          <div className="container mx-auto max-w-6xl px-4 py-32 md:py-48">
+        <section ref={heroRef} className="relative overflow-hidden">
+          <div
+            ref={gradientRef}
+            className="pointer-events-none absolute inset-0 opacity-70"
+            style={{
+              backgroundImage:
+                "linear-gradient(120deg, hsla(259, 95%, 65%, 0.28), hsla(215, 90%, 60%, 0.24), hsla(190, 90%, 55%, 0.2), hsla(259, 95%, 65%, 0.28))",
+              backgroundSize: "200% 200%",
+              backgroundPosition: "0% 50%",
+            }}
+          />
+
+          <div className="container relative mx-auto max-w-6xl px-4 py-32 md:py-44">
             <div className="mx-auto max-w-3xl text-center">
-              <h1 className="text-balance text-5xl font-extrabold tracking-tight md:text-7xl">
-                We help with your PDF tasks
+              <h1 className="home-reveal text-balance text-5xl font-extrabold tracking-tight md:text-7xl">
+                Smart PDF workflows, simplified
               </h1>
-              <p className="mt-6 text-pretty text-lg text-muted-foreground md:text-xl">
-                Easy, pleasant and productive PDF editor.
+              <p className="home-reveal mt-6 text-pretty text-lg text-muted-foreground md:text-xl">
+                Dr PDF Pro helps you edit, organize, secure, and manage PDF files quickly without complex desktop software.
               </p>
 
-              <div className="mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
+              <div className="home-reveal mt-10 flex flex-col items-center justify-center gap-4 sm:flex-row">
                 <Button asChild size="lg" className="px-8 bg-gradient-to-r from-primary to-purple-600 text-primary-foreground shadow-lg hover:shadow-xl transition-shadow">
-                  <NavLink to="/editor" activeClassName="">
-                    Edit a PDF document — it’s free
-                  </NavLink>
-                </Button>
-                <Button asChild size="lg" variant="secondary" className="px-8 shadow-sm hover:shadow-md transition-shadow">
                   <NavLink to="/browse-tools" activeClassName="">
-                    Browse tools
+                    Get Started
                   </NavLink>
                 </Button>
               </div>
@@ -185,83 +71,93 @@ const Index = () => {
           </div>
         </section>
 
-        <section id="popular" className="py-16">
+        <section className="pb-8">
           <div className="container mx-auto max-w-6xl px-4">
-            <div className="text-sm font-semibold uppercase tracking-wider text-primary">
-              Most popular
-            </div>
-
-            <div className="mt-6 grid gap-8 md:grid-cols-3">
-              {[{
-                title: "PDF Editor",
-                desc: "Edit PDF files for free. Replace text and export.",
-                to: "/editor",
-              },
-              {
-                title: "Compress",
-                desc: "Reduce the size of your PDF.",
-                to: "/compress",
-              },
-              {
-                title: "Delete Pages",
-                desc: "Remove pages from a document.",
-                to: "/delete-pages",
-              }].map((c) => (
-                <Card key={c.title} className="glass p-6 rounded-2xl transform hover:-translate-y-2 transition-transform">
-                  <div className="text-lg font-semibold">{c.title}</div>
-                  <p className="mt-2 text-muted-foreground">{c.desc}</p>
-                  <Button asChild className="mt-6" variant="secondary">
-                    <NavLink to={c.to} activeClassName="">
-                      Open
-                    </NavLink>
-                  </Button>
+            <div className="grid gap-4 md:grid-cols-3">
+              {[
+                {
+                  src: "https://images.unsplash.com/photo-1454165804606-c3d57bc86b40?auto=format&fit=crop&w=1200&q=80",
+                  alt: "Modern team planning workflow",
+                },
+                {
+                  src: "https://images.unsplash.com/photo-1517842645767-c639042777db?auto=format&fit=crop&w=1200&q=80",
+                  alt: "Document review and editing process",
+                },
+                {
+                  src: "https://images.unsplash.com/photo-1551281044-8b5bd28f6a77?auto=format&fit=crop&w=1200&q=80",
+                  alt: "Analytics and productivity dashboard",
+                },
+              ].map((image) => (
+                <Card key={image.src} className="home-reveal overflow-hidden rounded-2xl border border-border/60 bg-card/80 p-0">
+                  <img
+                    src={image.src}
+                    alt={image.alt}
+                    loading="lazy"
+                    className="h-52 w-full object-cover"
+                    referrerPolicy="no-referrer"
+                  />
                 </Card>
               ))}
             </div>
           </div>
         </section>
 
-        {/* Tools grid */}
-        <section id="tools" className="py-16">
+        <section ref={sectionRef} className="py-16">
           <div className="container mx-auto max-w-6xl px-4">
-            {toolGroups.map((group) => (
-              <div key={group.label} className="mt-16 first:mt-0">
-                <div className="text-sm font-semibold uppercase tracking-wider text-primary">
-                  {group.label}
-                </div>
+            <div className="grid gap-6 md:grid-cols-3">
+              <Card className="home-reveal rounded-2xl border border-border/60 bg-card/85 p-6">
+                <h2 className="text-lg font-semibold">What this website is about</h2>
+                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                  Dr PDF Pro is a focused web platform for essential PDF workflows: editing, form handling, organization, and export in a clean browser experience.
+                </p>
+              </Card>
 
-                <div className="mt-6 grid gap-8 md:grid-cols-3 lg:grid-cols-4">
-                  {group.items.map((t) => {
-                    const Icon = t.icon;
-                    return (
-                      <Card key={`${group.label}-${t.title}`} className="glass p-6 rounded-2xl transform hover:-translate-y-2 transition-transform">
-                        <div className="flex items-start gap-4">
-                          <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-primary/10 text-primary">
-                            <Icon className="h-6 w-6" />
-                          </div>
-                          <div className="min-w-0">
-                            <div className="text-lg font-semibold leading-tight">
-                              {t.title}
-                            </div>
-                            <p className="mt-2 text-sm text-muted-foreground">
-                              {t.desc}
-                            </p>
-                          </div>
-                        </div>
+              <Card className="home-reveal rounded-2xl border border-border/60 bg-card/85 p-6">
+                <h2 className="text-lg font-semibold">What problem it solves</h2>
+                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                  It removes the need for heavy desktop tools and fragmented utilities by centralizing practical PDF tasks in one consistent, fast, and easy interface.
+                </p>
+              </Card>
 
-                        <Button asChild className="mt-6" variant="secondary">
-                          <NavLink to={t.to} activeClassName="">
-                            Open
-                          </NavLink>
-                        </Button>
-                      </Card>
-                    );
-                  })}
-                </div>
-              </div>
-            ))}
+              <Card className="home-reveal rounded-2xl border border-border/60 bg-card/85 p-6">
+                <h2 className="text-lg font-semibold">Who developed it</h2>
+                <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
+                  Developed by ankit vishwakarma.
+                </p>
+              </Card>
+            </div>
           </div>
         </section>
+
+        <footer className="border-t border-border/60 bg-background/80">
+          <div className="container mx-auto grid max-w-6xl gap-8 px-4 py-10 md:grid-cols-3">
+            <div>
+              <h3 className="text-base font-semibold">Dr PDF Pro</h3>
+              <p className="mt-2 text-sm text-muted-foreground">
+                Professional PDF productivity workspace for fast, reliable, browser-based document tasks.
+              </p>
+            </div>
+
+            <div>
+              <h4 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Navigation</h4>
+              <div className="mt-3 flex flex-col gap-2 text-sm">
+                <NavLink to="/" className="hover:text-foreground transition-colors" activeClassName="text-foreground">Home</NavLink>
+                <NavLink to="/browse-tools" className="hover:text-foreground transition-colors" activeClassName="text-foreground">Tools</NavLink>
+                <NavLink to="/about" className="hover:text-foreground transition-colors" activeClassName="text-foreground">About</NavLink>
+                <NavLink to="/contact" className="hover:text-foreground transition-colors" activeClassName="text-foreground">Contact</NavLink>
+              </div>
+            </div>
+
+            <div>
+              <h4 className="text-sm font-semibold uppercase tracking-wide text-muted-foreground">Developer</h4>
+              <p className="mt-3 text-sm text-muted-foreground">ankit vishwakarma</p>
+            </div>
+          </div>
+
+          <div className="border-t border-border/60 py-4 text-center text-xs text-muted-foreground">
+            © {new Date().getFullYear()} Dr PDF Pro. All rights reserved.
+          </div>
+        </footer>
       </main>
     </div>
   );
